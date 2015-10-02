@@ -9,7 +9,7 @@ int ledPin = 5; // GPIO5
 WiFiServer server(80);
  
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   delay(10);
  
   pinMode(ledPin, OUTPUT);
@@ -60,8 +60,12 @@ void loop() {
  
   // Wait until the client sends some data
   Serial.println("new client");
+  int timeout;
+  timeout = 500;
   while(!client.available()){
     delay(1);
+    timeout--;
+    if (timeout == 0) return;
   }
  
   // Read the first line of the request
@@ -86,51 +90,20 @@ void loop() {
 //digitalWrite(ledPin, value);
  
   // Return the response
-  
-//  client.println("HTTP/1.1 200 OK");
-//  client.println("Content-Type: text/html");
-
-
   client.print("HTTP/1.1 200 OK\n\
-  Content-Type: text/html\n");
-
-  client.println(""); //  do not forget this one
-  client.println("<!DOCTYPE HTML>");
-  client.println("<html>");
-  client.println("<link rel=\"icon\" href=\"data:;base64,iVBORw0KGgo=\">");
-  client.print("PIN5=,");
-  if(value == HIGH) {
-    client.print("1");
-  } else {
-    client.print("0");
-  }
-  client.print(",<br><br>");
-  client.println("Click <a href=\"/LED=ON\">here</a> turn the LED on pin 5 ON<br>");
-  client.println("Click <a href=\"/LED=OFF\">here</a> turn the LED on pin 5 OFF<br>");
-  
-
-/*
-  client.print(
-  "HTTP/1.1 200 OK\n\
-  Content-Type: text/html\n\
-  \n\
+  Content-Type: text/html\n\n\
   <!DOCTYPE HTML>\n\
   <html>\n\
   PIN5=,");
-  
   if(value == HIGH) {
     client.print("1");
   } else {
     client.print("0");
   }
-  
-  client.print(
-  ",<br><br>\n\
+  client.print(",<br><br>\n\
   Click <a href=\"/LED=ON\">here</a> turn the LED on pin 5 ON<br>\n\
-  Click <a href=\"/LED=OFF\">here</a> turn the LED on pin 5 OFF<br>\n\
-  </html>\n");
-*/
- 
+  Click <a href=\"/LED=OFF\">here</a> turn the LED on pin 5 OFF<br>\n");
+   
   delay(1);
   Serial.println("Client disonnected");
   Serial.println("");
