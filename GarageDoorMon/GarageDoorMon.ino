@@ -5,25 +5,28 @@
 const char* ssid = "dlink942";
 const char* password = "4166029277";
  
-int ledPin = 5; // GPIO5
+int LEDPin = 5;
+int openClosePin = 4;
+int statusPin = 13;
+
+unsigned long currentMillis = 0;
+unsigned long previousMillis = 0;        // will store last time LED was updated
+unsigned long DoorActionDuration = 20000;   //door takes this long to open / close
 WiFiServer server(80);
  
 void setup() {
+  int i;
   Serial.begin(115200);
-  delay(10);
- 
-  pinMode(ledPin, OUTPUT);
- 
-  digitalWrite(ledPin, LOW);
-  delay(500);
-  digitalWrite(ledPin, HIGH);
-  delay(500);
-  digitalWrite(ledPin, LOW);
-  delay(500);
-  digitalWrite(ledPin, HIGH);
-  delay(500);
-  digitalWrite(ledPin, LOW);
-     
+  pinMode(openClosePin, OUTPUT);
+  pinMode(LEDPin, OUTPUT);
+  pinMode(statusPin, INPUT);
+  
+  for (i = 0; i < 10; i++) {
+    if (digitalRead(LEDPin)) digitalWrite(LEDPin, LOW);
+    else digitalWrite(LEDPin, HIGH);
+    delay(500);
+  }
+       
   // Connect to WiFi network
   Serial.println();
   Serial.println();
@@ -48,7 +51,7 @@ void setup() {
   Serial.print("http://");
   Serial.print(WiFi.localIP());
   Serial.println("/");
- 
+  digitalWrite(LEDPin, HIGH);
 }
  
 void loop() {
@@ -75,38 +78,69 @@ void loop() {
  
   // Match the request
  
-  int value = digitalRead(ledPin);
-  
-  if (request.indexOf("/LED=ON") != -1)  {
-    digitalWrite(ledPin, HIGH);
-    value = HIGH;
+  if (request.indexOf("/DOOR=CLOSE") != -1)  {
+    DoorAction(1);
   }
-  if (request.indexOf("/LED=OFF") != -1)  {
-    digitalWrite(ledPin, LOW);
-    value = LOW;
+  if (request.indexOf("/DOOR=OPEN") != -1)  {
+    DoorAction(0);
   }
- 
-// Set ledPin according to the request
-//digitalWrite(ledPin, value);
  
   // Return the response
   client.print("HTTP/1.1 200 OK\n\
   Content-Type: text/html\n\n\
   <!DOCTYPE HTML>\n\
   <html>\n\
-  PIN5=,");
-  if(value == HIGH) {
-    client.print("1");
-  } else {
-    client.print("0");
+  DOOR=,");
+
+  
+  if(IsDoorClosed()) {
+    client.print("CLOSED");
+  }
+  else {
+    client.print("OPEN");
   }
   client.print(",<br><br>\n\
-  Click <a href=\"/LED=ON\">here</a> turn the LED on pin 5 ON<br>\n\
-  Click <a href=\"/LED=OFF\">here</a> turn the LED on pin 5 OFF<br>\n");
+  Click <a href=\"/DOOR=OPEN\">here</a> Open the door.<br>\n\
+  Click <a href=\"/DOOR=CLOSE\">here</a> Close the door.<br>\n");
    
   delay(1);
   Serial.println("Client disonnected");
   Serial.println("");
  
 }
+
+
+void  DoorAction(boolean CloseRequest) {
+  currentMillis = millis();
+  if (currentMillis - previousMillis >= DoorActionDuration) {
+    previousMillis = currentMillis;
+
+    if (CloseRequest && !IsDoorClosed()) {
+      Serial.println("Closing door");
+      SignalDoor();
+    }
+    else if (!CloseRequest && IsDoorClosed()) {
+      Serial.println("Opening door");
+      SignalDoor();
+    }
+    else {
+      Serial.println("Door already in desired state");
+    }
+  }
+  else {
+    Serial.println("Unable to initiate door action.  Wait at least 20 seconds between action requests.");
+  }
+}
+
+void  SignalDoor() {
+  digitalWrite(openClosePin, HIGH);
+  delay(500);
+  digitalWrite(openClosePin, LOW);
+}
+
+boolean IsDoorClosed() {
+  return digitalRead(statusPin);
+}
+
+
 
