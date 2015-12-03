@@ -9,9 +9,15 @@ int LEDPin = 5;
 int openClosePin = 4;
 int statusPin = 13;
 
+boolean DoorStateIsClosed = true;
 unsigned long currentMillis = 0;
-unsigned long previousMillis = 0;        // will store last time LED was updated
+unsigned long DoorActionMillis = 0;        // will store last time the door was opened or closed
 unsigned long DoorActionDuration = 20000;   //door takes this long to open / close
+unsigned long DoorOpenMillis = 0;
+unsigned long DoorOpenedTime = 0;
+unsigned long DoorClosedMillis = 0;
+unsigned long DoorClosedTime = 0;
+
 WiFiServer server(80);
  
 void setup() {
@@ -52,6 +58,8 @@ void setup() {
   Serial.print(WiFi.localIP());
   Serial.println("/");
   digitalWrite(LEDPin, HIGH);
+
+  IsDoorClosed(); 
 }
  
 void loop() {
@@ -94,13 +102,23 @@ void loop() {
 
   
   if(IsDoorClosed()) {
-    client.print("CLOSED");
+  
+    currentMillis = millis();
+    DoorClosedTime = currentMillis - DoorClosedMillis;
+    DoorClosedTime = DoorClosedTime / 60000;          //this will be time in minutes
+    client.print("CLOSED, Duration = ,");
+    client.print(DoorClosedTime);
   }
   else {
-    client.print("OPEN");
+    currentMillis = millis();
+    DoorOpenedTime = currentMillis - DoorOpenMillis;
+    DoorOpenedTime = DoorOpenedTime / 60000;          //this will be time in minutes
+    client.print("OPEN, Duration = ,");
+    client.print(DoorOpenedTime);
   }
+  
   client.print(",<br><br>\n\
-  Click <a href=\"/DOOR=OPEN\">here</a> Open the door.<br>\n\
+  Click <a href=\"/DOOR=OPEN\">here</a> Open the door.<br><br>\n\n\
   Click <a href=\"/DOOR=CLOSE\">here</a> Close the door.<br>\n");
    
   delay(1);
@@ -112,8 +130,8 @@ void loop() {
 
 void  DoorAction(boolean CloseRequest) {
   currentMillis = millis();
-  if (currentMillis - previousMillis >= DoorActionDuration) {
-    previousMillis = currentMillis;
+  if (currentMillis - DoorActionMillis >= DoorActionDuration) {
+    DoorActionMillis = currentMillis;
 
     if (CloseRequest && !IsDoorClosed()) {
       Serial.println("Closing door");
@@ -139,7 +157,29 @@ void  SignalDoor() {
 }
 
 boolean IsDoorClosed() {
-  return digitalRead(statusPin);
+  boolean NewDoorState;
+
+  NewDoorState = digitalRead(statusPin);
+  
+  if (DoorStateIsClosed) {
+    if (!NewDoorState) {
+      //Door was closed and just became open
+      DoorOpenMillis = millis();
+    }
+    else {
+      //Door was closed and remains closed.
+    }
+  }
+  else {
+    if (NewDoorState) {
+      //Door was open and just became closed
+      DoorClosedMillis = millis();
+    }
+    else {
+      //Door was open and remains open.
+    }
+  }
+  return NewDoorState;
 }
 
 
