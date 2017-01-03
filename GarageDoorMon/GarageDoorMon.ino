@@ -18,6 +18,10 @@ unsigned long DoorOpenedTime = 0;
 unsigned long DoorClosedMillis = 0;
 unsigned long DoorClosedTime = 0;
 
+void  DoorAction(boolean CloseRequest);
+void  SignalDoor(void);
+boolean IsDoorClosed(void);
+
 WiFiServer server(80);
  
 void setup() {
@@ -59,10 +63,24 @@ void setup() {
   Serial.println("/");
   digitalWrite(LEDPin, HIGH);
 
+  DoorStateIsClosed = !digitalRead(statusPin);   //preload the state of this flag (opposite of the correct state)
   IsDoorClosed(); 
 }
  
 void loop() {
+
+  if(IsDoorClosed()) {
+  
+    currentMillis = millis();
+    DoorClosedTime = currentMillis - DoorClosedMillis;
+    DoorClosedTime = DoorClosedTime / 60000;          //this will be time in minutes
+  }
+  else {
+    currentMillis = millis();
+    DoorOpenedTime = currentMillis - DoorOpenMillis;
+    DoorOpenedTime = DoorOpenedTime / 60000;          //this will be time in minutes
+  }
+  
   // Check if a client has connected
   WiFiClient client = server.available();
   if (!client) {
@@ -102,17 +120,10 @@ void loop() {
 
   
   if(IsDoorClosed()) {
-  
-    currentMillis = millis();
-    DoorClosedTime = currentMillis - DoorClosedMillis;
-    DoorClosedTime = DoorClosedTime / 60000;          //this will be time in minutes
     client.print("CLOSED, Duration = ,");
     client.print(DoorClosedTime);
   }
   else {
-    currentMillis = millis();
-    DoorOpenedTime = currentMillis - DoorOpenMillis;
-    DoorOpenedTime = DoorOpenedTime / 60000;          //this will be time in minutes
     client.print("OPEN, Duration = ,");
     client.print(DoorOpenedTime);
   }
@@ -123,8 +134,7 @@ void loop() {
    
   delay(1);
   Serial.println("Client disonnected");
-  Serial.println("");
- 
+  Serial.println(""); 
 }
 
 
@@ -150,13 +160,13 @@ void  DoorAction(boolean CloseRequest) {
   }
 }
 
-void  SignalDoor() {
+void  SignalDoor(void) {
   digitalWrite(openClosePin, HIGH);
   delay(500);
   digitalWrite(openClosePin, LOW);
 }
 
-boolean IsDoorClosed() {
+boolean IsDoorClosed(void) {
   boolean NewDoorState;
 
   NewDoorState = digitalRead(statusPin);
@@ -164,6 +174,7 @@ boolean IsDoorClosed() {
   if (DoorStateIsClosed) {
     if (!NewDoorState) {
       //Door was closed and just became open
+      DoorStateIsClosed = false;
       DoorOpenMillis = millis();
     }
     else {
@@ -173,6 +184,7 @@ boolean IsDoorClosed() {
   else {
     if (NewDoorState) {
       //Door was open and just became closed
+      DoorStateIsClosed = true;
       DoorClosedMillis = millis();
     }
     else {
