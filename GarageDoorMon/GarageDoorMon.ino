@@ -2,7 +2,7 @@
 
 //http://www.arduinesp.com/wifiwebserver
  
-const char* ssid = "dlink942";
+const char* ssid = "dlink942_2GEXT";
 const char* password = "4166029277";
  
 int LEDPin = 5;
